@@ -1,0 +1,23 @@
+{
+  "eqeqeq": true,
+  "forin": true,
+  "indent": 2,
+  "latedef": "nofunc",
+  "newcap": true,
+  "noarg": true,
+  "noempty": true,
+  "nonbsp": true,
+  "undef": true,
+  "predef": ["log", "warn", "logArr", "warnArr"],
+  "browser": true,
+  "jasmine": true,
+  "esversion": 6,
+
+  "asi": true,
+  "eqnull": true,
+  "expr": true,
+  "laxcomma": true,
+
+  "devel": true,
+  "node": true
+}

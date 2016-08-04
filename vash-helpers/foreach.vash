@@ -1,0 +1,5 @@
+vash.helpers.foreach = function(list, cb) {
+	@for(var i=0; i<(list.length); i++) {
+		cb(list[i]);
+	}
+}

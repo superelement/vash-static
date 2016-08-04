@@ -1,0 +1,3 @@
+vash.helpers.noHelp = function() {
+    return "Example of custom helper";
+}

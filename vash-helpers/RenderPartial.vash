@@ -1,0 +1,4 @@
+vash.helpers.RenderPartial = function(name, mdl) {
+	//console.log(name, mdl)
+	@Html.Raw(Html.tplcache[name](mdl))
+}

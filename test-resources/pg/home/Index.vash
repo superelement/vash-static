@@ -1,0 +1,5 @@
+@{
+	var Model = {Title: "Home Page"}
+}
+<h1>@Model.Title</h1>
+<p>Welcome Home</p>

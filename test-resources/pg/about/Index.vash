@@ -1,0 +1,7 @@
+@{
+	var Model = {Title: "About Page"}
+}
+<h1>@Model.Title</h1>
+<p>About Us</p>
+
+@Html.foreach(["I", " am", " a", " list", " sample"], function(item) { @item })

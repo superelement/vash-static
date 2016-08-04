@@ -1,0 +1,8 @@
+<p class="p-sm">
+	Complex template
+	@* block comment *@
+
+	@*VASH_IGNORE_START*@
+	<p>Stuff to be ignored</p>
+	@*VASH_IGNORE_END*@
+</p>
