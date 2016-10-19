@@ -175,6 +175,99 @@ function normalizeTemplate(tmplPath, dest, contents, cb) {
 }
 
 
+function convertForEach(tmpl) {
+  
+  var tmplSplit = tmpl.split('@foreach(');
+
+  // if no @foreach loops, return same string as received
+  if(tmplSplit.length === 1) return tmpl;
+
+  // grabs the first bunch of characters of the template affected so you can find and debug it
+  var tmplErrorFinder = " ---- FOUND IN: " + tmpl.substr(0, 50);
+
+  var firstChunk // code before the first '@foreach
+    , newChunks = [];
+  tmplSplit.forEach(function(chunk, i) { // goes through each '@foreach' split
+    var splitArr = chunk.split("{") // code before the '@foreach'  ----plus----  code after first '{'
+      , loopLogic = splitArr[0] // code before the '{'
+
+    if(i === 0) {
+      firstChunk = chunk; // code before the first @foreach loop
+    } else {
+
+      var trailingCode = splitArr[1] // code after '{' all the way up to the next '@foreach'
+        , trailingSplitArr = trailingCode.split("}") // code within this loop  ----plus---- code all the way up to the next '@foreach'
+        , loopMarkupUntrimmed = trailingSplitArr[0]
+        , loopMarkup = getIndent( loopMarkupUntrimmed ) + loopMarkupUntrimmed.trim() // code/markup within the loop (white space trimmed)
+        , afterLoop = trailingSplitArr[1] // code after '}' all the way up to the next '@foreach'
+      
+      //console.log("--", loopMarkupUntrimmed)
+      
+      var itemName;
+      if(loopLogic.indexOf('var ') === -1) { // warn if no 'var' found, as 'var' is the expected variable keyword to be used
+        warn(NS, "convertForEach", "No item variable name detected within 'foreach' loop. It should be defined by 'var' keyword and use a single space to separate it - for example '@foreach(var item ...'. Defaulting to 'item'.", tmplErrorFinder);
+        itemName = "item in "; // if no item variable name is detected, defaults to 'item', and includes the ' in ' so next condition doesn't error
+      }
+      itemName = loopLogic.split('var ')[1]; // gets the variable name, but still includes trailing ' in ...' code
+
+      if(itemName.indexOf(" in ") === -1) { // errors if can't find 'in' keyword
+        throw Error(NS + " - convertForEach - Could not find the 'in' keyword after the variable in 'foreach' loop. Please check your syntax follows this pattern '@foreach(var item in ...'" + tmplErrorFinder);
+      }
+      
+      itemName = itemName.split(" in ")[0]; // separates the variable name from the rest of the code on that line
+
+      var listName = loopLogic.split(" in ")[1].split(")")[0]; // gets the list variable name
+
+      newChunks.push({
+        itemName: itemName
+        , listName: listName
+        , loopMarkup: loopMarkup
+      });
+
+      
+
+      //log(NS, "convertForEach", itemName, listName, loopMarkup)
+    }
+  })
+
+  // builds the new template
+  tmpl = firstChunk;
+  newChunks.forEach(function(chunk, i) {
+    tmpl += '@Html.foreach(' + chunk.listName + ', function('+ chunk.itemName +') {\n' + chunk.loopMarkup + '\n})'
+  });
+
+  return tmpl;
+}
+
+
+// gets the indentation of a code block after the first line break
+function getIndent(tmpl) {
+
+  tmpl = tmpl.split('\r').join('\n'); // normalizes line breaks for code editor differences
+
+  var lineBreakIndex = tmpl.indexOf('\n');
+  if(lineBreakIndex !== -1) {
+    
+    tmpl.split('\n').forEach(function(line) {
+      // gets first single line that contains code other than white space
+      if(line.trim()) tmpl = line.split('\n')[0];
+    })
+  }
+
+  var indent = "", nonSpaceFound = false;
+  
+  console.log("tmpl", tmpl)
+  // loops through first single line of code and returns space and tab characters up until first non-white space character
+  tmpl.split("").forEach(function(char) {
+    var isWhiteSpace = char.trim() === '';
+
+    if(!nonSpaceFound && isWhiteSpace) indent += char;
+    else nonSpaceFound = true;
+  });
+
+  return indent;
+}
+
 /**
  * Makes vash syntax more like Razor for C#
  * @param {string} tmpl - Template contents, potentially containing common C# syntax that Vash does not understand.
@@ -195,6 +288,8 @@ function normalizeRazorSyntax(tmpl) {
   tmpl = tmpl.split("Html.Raw").join("Html.raw");
   tmpl = tmpl.split(".Length").join(".length");
   tmpl = tmpl.split(".Count").join(".length");
+
+  tmpl = convertForEach(tmpl);
 
   return tmpl;
 }
@@ -507,5 +602,7 @@ module.exports = {
     , prependModels: prependModels
     , compileTemplate: compileTemplate
     , setCustomHelpers: setCustomHelpers
+    , convertForEach: convertForEach
+    , getIndent: getIndent // TODO: tests
   }
 }

@@ -6,3 +6,12 @@
 	<p>Stuff to be ignored</p>
 	@*VASH_IGNORE_END*@
 </p>
+
+@{
+	var list = ["I", " am", " a", " list", " sample"];
+}
+
+
+@foreach(var item in list) {
+	stuff @item stuff
+}

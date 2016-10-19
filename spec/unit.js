@@ -12,7 +12,7 @@ var MAIN_DIR = slash(__dirname).split("spec")[0]
   , SAMPLE_CACHE = TEST_RES + "sample-template-cache.json"
 
 afterEach(function() {
-	fs.removeSync(TEMP_DIR);
+	//fs.removeSync(TEMP_DIR);
 })
 
 describe("normalizeRazorSyntax", function() {
@@ -35,6 +35,7 @@ describe("normalizeRazorSyntax", function() {
 		expect(fun("Html.Raw()")).toBe("Html.raw()")
 		expect(fun("a.Length")).toBe("a.length")
 		expect(fun("b.Count")).toBe("b.length")
+		
 	})
 
 	it("should remove code between 'ignore' comments across multiple line breaks", function() {
@@ -293,6 +294,26 @@ describe("precompileTemplateCache", function() {
 			 expect(tmpl.contents).toContain("Jimmy D"); // "Jimmy D"" is a string within the sample models.js file
 			 done()
 		 })
+	})
+})
+
+
+describe("convertForEach", function() {
+
+	var fun = vashStatic.testable.convertForEach
+	  , tmplPath = TEST_RES + "foreach-simple.vash"
+	  , originalContents = fs.readFileSync(tmplPath).toString()
+
+	it("should should convert a simple C# razor `@foreach` loop into vash a compatible one", function(){
+		// enables warnings and logs for this test
+		vashStatic.testable.suppressWarnings(false);
+		
+		var contents = fun(originalContents);
+		//console.log("contents", contents)
+		expect(contents).toContain('@Html.foreach(list, function(item) {\n\tstuff @item stuff\n})')
+		
+		// suppresses warnings and logs again
+		vashStatic.testable.suppressWarnings(true);
 	})
 })
 

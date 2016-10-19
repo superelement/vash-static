@@ -1,7 +1,11 @@
 @{
-	var Model = {Title: "About Page"}
+	var Model = {Title: "About Page"};
+	var list = ["I", " am", " a", " list", " sample"];
 }
 <h1>@Model.Title</h1>
 <p>About Us</p>
 
-@Html.foreach(["I", " am", " a", " list", " sample"], function(item) { @item })
+@* Uses C# syntax, which will be converted to a vash @foreach helper *@
+@foreach(var item in list) {
+	@item
+}
