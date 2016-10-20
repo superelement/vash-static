@@ -8,10 +8,19 @@
 </p>
 
 @{
-	var list = ["I", " am", " a", " list", " sample"];
+	var list = [{
+		list: ["I", " am", " a", " list", " sample"]
+	}];
 }
 
 
-@foreach(var item in list) {
-	stuff @item stuff
+@foreach(var item1 in list) {
+	stuff
+	@{
+		var someProp = "1";
+	}
+	@foreach(var item2 in item1.list) {
+		stuff @item1 stuff
+		stuff @item2 stuff
+	}
 }

@@ -1,0 +1,9 @@
+@{
+	var list = ["I", " am", " a", " list", " sample"];
+}
+
+
+@foreach(var item in list) {
+	stuff @item stuff
+	stuff @item stuff
+}

@@ -175,6 +175,42 @@ function normalizeTemplate(tmplPath, dest, contents, cb) {
 }
 
 
+/**
+ * @description converts characters `@{` and first trailing `}` to special characters that can be converted back at a later stage
+ * @param {string} tmpl - The template string to modify
+ * @param {boolean} doSpceial - If true, will create special snippets. If false, will convert special snippets back to original characters.
+ * @return {string} The modified template string. 
+ **/ 
+function convertLogicChars(tmpl, doSpceial) {
+
+  var OPEN_ORIG = "@{"
+    , CLOSE_ORIG = "}"
+    , OPEN_SPEC = "++OPEN++"
+    , CLOSE_SPEC = "++CLOSE++"
+    , newTmpl = "";
+
+  if(doSpceial) {
+
+    if(tmpl.indexOf( OPEN_ORIG ) !== -1) {
+      tmpl.split( OPEN_ORIG ).forEach(function(chunk, i) {
+        if(i === 0) {
+          newTmpl += chunk;
+        } else {
+          newTmpl += OPEN_SPEC + chunk.split(CLOSE_ORIG).join(CLOSE_SPEC);
+        }
+      });
+    } else {
+      return tmpl;
+    }
+  } else {
+    // converts special snippets back to originals
+    newTmpl = tmpl.split(OPEN_SPEC).join(OPEN_ORIG).split(CLOSE_SPEC).join(CLOSE_ORIG);
+  }
+
+
+  return newTmpl;
+}
+
 function convertForEach(tmpl) {
   
   var tmplSplit = tmpl.split('@foreach(');
@@ -188,6 +224,9 @@ function convertForEach(tmpl) {
   var firstChunk // code before the first '@foreach
     , newChunks = [];
   tmplSplit.forEach(function(chunk, i) { // goes through each '@foreach' split
+
+    chunk = convertLogicChars(chunk, true);
+
     var splitArr = chunk.split("{") // code before the '@foreach'  ----plus----  code after first '{'
       , loopLogic = splitArr[0] // code before the '{'
 
@@ -196,8 +235,15 @@ function convertForEach(tmpl) {
     } else {
 
       var trailingCode = splitArr[1] // code after '{' all the way up to the next '@foreach'
-        , trailingSplitArr = trailingCode.split("}") // code within this loop  ----plus---- code all the way up to the next '@foreach'
-        , loopMarkupUntrimmed = trailingSplitArr[0]
+      
+      // if there is a nested @foreach loop ------- WIP
+      if(trailingCode.indexOf("}") !== -1) {
+
+      }
+
+      var trailingSplitArr = trailingCode.split("}") // code within this loop  ----plus---- code all the way up to the next '@foreach'
+      
+      var loopMarkupUntrimmed = trailingSplitArr[0]
         , loopMarkup = getIndent( loopMarkupUntrimmed ) + loopMarkupUntrimmed.trim() // code/markup within the loop (white space trimmed)
         , afterLoop = trailingSplitArr[1] // code after '}' all the way up to the next '@foreach'
       
@@ -217,6 +263,8 @@ function convertForEach(tmpl) {
       itemName = itemName.split(" in ")[0]; // separates the variable name from the rest of the code on that line
 
       var listName = loopLogic.split(" in ")[1].split(")")[0]; // gets the list variable name
+
+      loopMarkup = convertLogicChars(loopMarkup, false);
 
       newChunks.push({
         itemName: itemName
@@ -256,7 +304,7 @@ function getIndent(tmpl) {
 
   var indent = "", nonSpaceFound = false;
   
-  console.log("tmpl", tmpl)
+  //console.log("tmpl", tmpl)
   // loops through first single line of code and returns space and tab characters up until first non-white space character
   tmpl.split("").forEach(function(char) {
     var isWhiteSpace = char.trim() === '';
@@ -604,5 +652,6 @@ module.exports = {
     , setCustomHelpers: setCustomHelpers
     , convertForEach: convertForEach
     , getIndent: getIndent // TODO: tests
+    , convertLogicChars: convertLogicChars
   }
 }

@@ -35,7 +35,6 @@ describe("normalizeRazorSyntax", function() {
 		expect(fun("Html.Raw()")).toBe("Html.raw()")
 		expect(fun("a.Length")).toBe("a.length")
 		expect(fun("b.Count")).toBe("b.length")
-		
 	})
 
 	it("should remove code between 'ignore' comments across multiple line breaks", function() {
@@ -61,7 +60,7 @@ describe("normalizeRazorSyntax", function() {
 describe("normalizeTemplate", function() {
 	var fun = vashStatic.testable.normalizeTemplate
 	  , tmplPath = TEST_RES + "complex.vash"
-	  , dest = TEMP_DIR + "normalizeTemplate/simple.cshtml"
+	  , dest = TEMP_DIR + "normalizeTemplate/complex.cshtml"
 	  , originalContents = fs.readFileSync(tmplPath).toString()
 	  , normalizedContents = vashStatic.testable.normalizeRazorSyntax(originalContents)
 
@@ -301,19 +300,44 @@ describe("precompileTemplateCache", function() {
 describe("convertForEach", function() {
 
 	var fun = vashStatic.testable.convertForEach
-	  , tmplPath = TEST_RES + "foreach-simple.vash"
-	  , originalContents = fs.readFileSync(tmplPath).toString()
+	  , originalForEachSimple = fs.readFileSync(TEST_RES + "foreach-simple.vash").toString()
+	  , originalForEachMultiLine = fs.readFileSync(TEST_RES + "foreach-multi-line.vash").toString()
 
 	it("should should convert a simple C# razor `@foreach` loop into vash a compatible one", function(){
 		// enables warnings and logs for this test
 		vashStatic.testable.suppressWarnings(false);
 		
-		var contents = fun(originalContents);
+		var contents = fixLineReturns( fun(originalForEachSimple) )
 		//console.log("contents", contents)
 		expect(contents).toContain('@Html.foreach(list, function(item) {\n\tstuff @item stuff\n})')
 		
 		// suppresses warnings and logs again
 		vashStatic.testable.suppressWarnings(true);
+	})
+	
+	it("should should convert a mutli-line C# razor `@foreach` loop into vash a compatible one", function(){
+		// enables warnings and logs for this test
+		vashStatic.testable.suppressWarnings(false);
+		
+		var contents = fixLineReturns( fun(originalForEachMultiLine) )
+		//console.log("contents", contents)
+		expect(contents).toContain('@Html.foreach(list, function(item) {\n\tstuff @item stuff\n\tstuff @item stuff\n})')
+		
+		// suppresses warnings and logs again
+		vashStatic.testable.suppressWarnings(true);
+	})
+})
+
+describe("convertLogicChars", function() {
+	var fun = vashStatic.testable.convertLogicChars
+
+	var OPEN_ORIG = "@{"
+      , CLOSE_ORIG = "}"
+      , OPEN_SPEC = "++OPEN++"
+      , CLOSE_SPEC = "++CLOSE++"
+
+	it("should convert '"+OPEN_ORIG+"' and '"+CLOSE_ORIG+"' to special character snippets", function(){
+		expect( fun('stuff ' + OPEN_ORIG+" stuff "+CLOSE_ORIG, true) ).toBe('stuff ' + OPEN_SPEC+" stuff "+CLOSE_SPEC);
 	})
 })
 
@@ -326,3 +350,10 @@ describe("XXXXX", function() {
 	})
 })
 */
+
+// utils
+
+// Some code editors use '\r' and even '\r\n', so this sanitizes that to just single '\n'
+function fixLineReturns(tmpl) {
+	return tmpl.split("\r\n").join("\n").split("\r").join("\n");
+}
