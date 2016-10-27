@@ -6,3 +6,5 @@
 @foreach(var item in list) {
 	stuff @item stuff
 }
+
+<p>trailing content</p>

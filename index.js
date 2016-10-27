@@ -278,6 +278,7 @@ function convertForEach(tmpl) {
         itemName: itemName
         , listName: listName
         , loopMarkup: loopMarkup
+        , afterLoop: afterLoop
       });
 
       
@@ -289,7 +290,7 @@ function convertForEach(tmpl) {
   // builds the new template
   tmpl = firstChunk;
   newChunks.forEach(function(chunk, i) {
-    tmpl += '@Html.foreach(' + chunk.listName + ', function('+ chunk.itemName +') {\n' + chunk.loopMarkup + '\n})'
+    tmpl += '@Html.foreach(' + chunk.listName + ', function('+ chunk.itemName +') {\n' + chunk.loopMarkup + '\n})' + chunk.afterLoop
   });
 
   return tmpl;

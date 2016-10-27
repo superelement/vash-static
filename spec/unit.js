@@ -361,6 +361,9 @@ describe("convertForEach", function() {
 		//console.log("contents", contents)
 		expect(contents).toContain('@Html.foreach(list, function(item) {\n\tstuff @item stuff\n})')
 		
+		// also ensure training content exists
+		expect(contents).toContain('<p>trailing content</p>')
+		
 		// suppresses warnings and logs again
 		vashStatic.testable.suppressWarnings(true);
 	})
