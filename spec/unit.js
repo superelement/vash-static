@@ -236,6 +236,56 @@ describe("setCustomHelpers", function() {
 		var precompiled = vashStatic.testable.compileTemplate('@Html.noHelp()')
 		expect(precompiled()).toBe("Example of custom helper")
 	})
+
+	describe("StringIsNullOrEmpty", function() {
+
+		it("Helper StringIsNullOrEmpty should include the code in condition, based on the provided string being empty", function() {
+			fun()
+			var sample = fs.readFileSync(TEST_RES + "StringIsNullOrEmpty-1.vash").toString()
+			, precompiled = vashStatic.testable.compileTemplate(sample)
+			expect(precompiled()).toContain("<p>should render</p>")
+		})
+
+		it("Helper StringIsNullOrEmpty should exclude the code in condition, based on the provided string having content", function() {
+			fun()
+			var sample = fs.readFileSync(TEST_RES + "StringIsNullOrEmpty-2.vash").toString()
+			, precompiled = vashStatic.testable.compileTemplate(sample)
+			expect(precompiled()).not.toContain("<p>should not render</p>")
+		})
+
+		it("CS 'string.IsNullOrEmpty' should include the code in condition, based on the provided string being empty", function() {
+			fun()
+			var sample = fs.readFileSync(TEST_RES + "StringIsNullOrEmpty-CS.vash").toString()
+			sample = vashStatic.testable.normalizeRazorSyntax(sample)
+			var precompiled = vashStatic.testable.compileTemplate(sample)
+			expect(precompiled()).toContain("<p>should render</p>")
+		})
+	})
+
+	describe("StringIsNullOrWhiteSpace", function() {
+
+		it("Helper StringIsNullOrWhiteSpace should include the code in condition, based on the provided string containing only spaces", function() {
+			fun()
+			var sample = fs.readFileSync(TEST_RES + "StringIsNullOrWhiteSpace-1.vash").toString()
+			, precompiled = vashStatic.testable.compileTemplate(sample)
+			expect(precompiled()).toContain("<p>should render</p>")
+		})
+		
+		it("Helper StringIsNullOrWhiteSpace should exclude the code in condition, based on the provided string having content", function() {
+			fun()
+			var sample = fs.readFileSync(TEST_RES + "StringIsNullOrWhiteSpace-2.vash").toString()
+			, precompiled = vashStatic.testable.compileTemplate(sample)
+			expect(precompiled()).not.toContain("<p>should not render</p>")
+		})
+		
+		it("CS 'string.IsNullOrWhiteSpace' should include the code in condition, based on the provided string being empty", function() {
+			fun()
+			var sample = fs.readFileSync(TEST_RES + "StringIsNullOrWhiteSpace-CS.vash").toString()
+			sample = vashStatic.testable.normalizeRazorSyntax(sample)
+			var precompiled = vashStatic.testable.compileTemplate(sample)
+			expect(precompiled()).toContain("<p>should render</p>")
+		})
+	})
 })
 
 describe("renderPage", function() {
@@ -338,6 +388,17 @@ describe("convertLogicChars", function() {
 
 	it("should convert '"+OPEN_ORIG+"' and '"+CLOSE_ORIG+"' to special character snippets", function(){
 		expect( fun('stuff ' + OPEN_ORIG+" stuff "+CLOSE_ORIG, true) ).toBe('stuff ' + OPEN_SPEC+" stuff "+CLOSE_SPEC);
+	})
+})
+
+describe("convertStringHelpers", function() {
+	var fun = vashStatic.testable.convertStringHelpers
+
+	it("should convert string helpers to vash versions", function(){
+		expect(fun("string.IsNullOrWhiteSpace")).toBe("Html.StringIsNullOrWhiteSpace")
+		expect(fun("String.IsNullOrWhiteSpace")).toBe("Html.StringIsNullOrWhiteSpace")
+		expect(fun("string.IsNullOrEmpty")).toBe("Html.StringIsNullOrEmpty")
+		expect(fun("String.IsNullOrEmpty")).toBe("Html.StringIsNullOrEmpty")
 	})
 })
 

@@ -211,6 +211,14 @@ function convertLogicChars(tmpl, doSpceial) {
   return newTmpl;
 }
 
+function convertStringHelpers(tmpl) {
+  tmpl = tmpl.split("string.IsNullOrWhiteSpace").join("Html.StringIsNullOrWhiteSpace");
+  tmpl = tmpl.split("String.IsNullOrWhiteSpace").join("Html.StringIsNullOrWhiteSpace");
+  tmpl = tmpl.split("string.IsNullOrEmpty").join("Html.StringIsNullOrEmpty");
+  tmpl = tmpl.split("String.IsNullOrEmpty").join("Html.StringIsNullOrEmpty");
+  return tmpl;
+}
+
 function convertForEach(tmpl) {
   
   var tmplSplit = tmpl.split('@foreach(');
@@ -338,6 +346,7 @@ function normalizeRazorSyntax(tmpl) {
   tmpl = tmpl.split(".Count").join(".length");
 
   tmpl = convertForEach(tmpl);
+  tmpl = convertStringHelpers(tmpl);
 
   return tmpl;
 }
@@ -395,6 +404,8 @@ function setCustomHelpers(newHelpers) {
      __dirname + "/vash-helpers/RenderPartial.vash"
     , __dirname + "/vash-helpers/foreach.vash"
     , __dirname + "/vash-helpers/LayoutContent.vash"
+    , __dirname + "/vash-helpers/StringIsNullOrEmpty.vash"
+    , __dirname + "/vash-helpers/StringIsNullOrWhiteSpace.vash"
   ];
 
   if(newHelpers) {
@@ -651,6 +662,7 @@ module.exports = {
     , compileTemplate: compileTemplate
     , setCustomHelpers: setCustomHelpers
     , convertForEach: convertForEach
+    , convertStringHelpers: convertStringHelpers
     , getIndent: getIndent // TODO: tests
     , convertLogicChars: convertLogicChars
   }

@@ -1,0 +1,3 @@
+vash.helpers.StringIsNullOrEmpty = function(str) {
+	return !str;
+}

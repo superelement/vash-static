@@ -1,0 +1,8 @@
+<div>
+    @{
+        var contentSample = "a";
+    }
+    @if(Html.StringIsNullOrEmpty(contentSample)) {
+        <p>should not render</p>
+    }
+</div>

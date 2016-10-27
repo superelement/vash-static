@@ -1,0 +1,8 @@
+<div>
+    @{
+        var whiteSpaceSample = "  ";
+    }
+    @if(Html.StringIsNullOrWhiteSpace(whiteSpaceSample)) {
+        <p>should render</p>
+    }
+</div>
