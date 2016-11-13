@@ -346,7 +346,7 @@ xdescribe("precompileTemplateCache", function() {
 	})
 })
 
-describe("convertLogicChars", function() {
+xdescribe("convertLogicChars", function() {
 	var fun = vashStatic.testable.convertLogicChars
 
 	var OPEN_ORIG = "@{"
@@ -370,14 +370,14 @@ describe("convertLogicChars", function() {
 })
 
 
-xdescribe("convertForEach", function() {
+describe("convertForEach", function() {
 
 	var fun = vashStatic.testable.convertForEach
 	  , originalForEachSimple = fs.readFileSync(TEST_RES + "foreach-simple.vash").toString()
 	  , originalForEachMultiLine = fs.readFileSync(TEST_RES + "foreach-multi-line.vash").toString()
 	  , originalForEachNested = fs.readFileSync(TEST_RES + "foreach-nested.vash").toString()
 
-	it("should should convert a simple C# razor `@foreach` loop into vash a compatible one", function(){
+	xit("should should convert a simple C# razor `@foreach` loop into vash a compatible one", function(){
 		// enables warnings and logs for this test
 		vashStatic.testable.suppressWarnings(false);
 		
@@ -394,7 +394,7 @@ xdescribe("convertForEach", function() {
 		vashStatic.testable.suppressWarnings(true);
 	})
 	
-	it("should should convert a mutli-line C# razor `@foreach` loop into vash a compatible one", function(){
+	xit("should should convert a mutli-line C# razor `@foreach` loop into vash a compatible one", function(){
 		// enables warnings and logs for this test
 		vashStatic.testable.suppressWarnings(false);
 		
@@ -407,12 +407,14 @@ xdescribe("convertForEach", function() {
 	})
 	
 	// WIP
-	xit("should should convert a nested C# razor `@foreach` loop into vash a compatible one", function(){
+	it("should should convert a nested C# razor `@foreach` loop into vash a compatible one", function(){
 		// enables warnings and logs for this test
 		vashStatic.testable.suppressWarnings(false);
 		
 		var contents = fixLineReturns( fun(originalForEachNested) )
 		//console.log("contents", contents)
+
+		fs.outputFileSync( TEMP_DIR + "convertForEach/foreach-nested.html", contents );
 		//expect(contents).toContain('@Html.foreach(list, function(item) {\n\tstuff @item stuff\n\tstuff @item stuff\n})')
 		
 		// suppresses warnings and logs again
