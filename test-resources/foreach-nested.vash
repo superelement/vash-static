@@ -1,0 +1,24 @@
+@{
+	var list1 = ["I", " am", " a", " list", " sample"];
+	var list2 = ["I", " am", " a", " list", " sample"];
+	var condition = true;
+}
+
+
+@foreach(var item1 in list1) {
+	stuff @item1 stuff
+	stuff @item1 stuff
+	
+	@if(condition) {
+		tests nested curly braces
+	}
+	
+	@foreach(var item2 in list2) {
+		nested stuff @item2 stuff
+		nested stuff @item2 stuff
+
+		@if(condition) {
+			tests nested curly braces
+		}
+	}
+}

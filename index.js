@@ -175,6 +175,48 @@ function normalizeTemplate(tmplPath, dest, contents, cb) {
 }
 
 
+if (!String.prototype.splice) {
+    /**
+     * {JSDoc}
+     *
+     * The splice() method changes the content of a string by removing a range of
+     * characters and/or adding new characters.
+     *
+     * @this {String}
+     * @param {number} start Index at which to start changing the string.
+     * @param {number} delCount An integer indicating the number of old chars to remove.
+     * @param {string} newSubStr The String that is spliced in.
+     * @return {string} A new string with the spliced substring.
+     */
+    String.prototype.splice = function(start, delCount, newSubStr) {
+        return this.slice(0, start) + newSubStr + this.slice(start + Math.abs(delCount));
+    };
+}
+
+
+// replaces all the chars in a string except the last one
+function replaceAllButLast( str, findChar, replaceWithChar ) {
+  var newStr = ""
+    , arr = str.split(findChar);
+  
+  // no changes
+  if(arr.length === 1) return str;
+
+  arr.forEach(function(ch, i) {
+    if(i === 0) {
+      newStr += ch;
+    } else {
+      if(i === arr.length-1) {
+        newStr += findChar + ch;
+      } else {
+        newStr += replaceWithChar + ch;
+      }
+    }
+  });
+
+  return newStr;
+}
+
 /**
  * @description converts characters `@{` and first trailing `}` to special characters that can be converted back at a later stage
  * @param {string} tmpl - The template string to modify
@@ -187,7 +229,30 @@ function convertLogicChars(tmpl, doSpceial) {
     , CLOSE_ORIG = "}"
     , OPEN_SPEC = "++OPEN++"
     , CLOSE_SPEC = "++CLOSE++"
+    , CLOSE_TEMP = "++CLOSE_TEMP++"
     , newTmpl = "";
+  
+
+
+  var closeSafely = function(miniChunk) {
+
+    miniChunk = miniChunk.replace("}", CLOSE_TEMP); // replaces first close brace with temporary placeholder
+    var closeBraceInd = miniChunk.indexOf("}"); // gets the next closing brace, which should be the one we want 
+
+    if(closeBraceInd === -1) {
+      // if no more closing braces found, revert the temporary placeholder 
+      
+      return miniChunk.replace(CLOSE_TEMP, "}");
+    } else {
+      // but if another closing brace is found, replace it with a special closing brace
+      
+      // need to recursively loop until only 1 closing brace is found
+      if(miniChunk.split("}").length > 2) return closeSafely(miniChunk);
+
+      return miniChunk.splice(closeBraceInd, 1, CLOSE_SPEC);
+    }
+  }
+
 
   if(doSpceial) {
 
@@ -196,7 +261,31 @@ function convertLogicChars(tmpl, doSpceial) {
         if(i === 0) {
           newTmpl += chunk;
         } else {
-          newTmpl += OPEN_SPEC + chunk.split(CLOSE_ORIG).join(CLOSE_SPEC);
+
+          newTmpl += OPEN_SPEC;
+
+          var openBraceSplit = chunk.split("{");
+
+          // if nested braces detected, replace only the appropriate closing brace character and not the nested ones
+          if(openBraceSplit.length > 1) {
+            
+            var newChunk = "";
+            openBraceSplit.forEach(function(miniChunk, i) {
+              if(i === 0) newChunk += miniChunk;
+              else        newChunk += "{" + closeSafely(miniChunk);
+            });
+
+            // in some cases there may be multiple 'CLOSE_SPEC' characters, if subling braces (like if conditions) exist. This function ensures only the last one closes the logic block
+            newChunk = replaceAllButLast( newChunk, CLOSE_SPEC, "}");
+
+            // remove any remaining temporary placeholders
+            newChunk = newChunk.split(CLOSE_TEMP).join("}");
+
+            newTmpl += newChunk;
+          } else {
+            // if there are no nested braces, it is much simpler
+            newTmpl += chunk.split(CLOSE_ORIG).join(CLOSE_SPEC);
+          }
         }
       });
     } else {
@@ -218,6 +307,65 @@ function convertStringHelpers(tmpl) {
   tmpl = tmpl.split("String.IsNullOrEmpty").join("Html.StringIsNullOrEmpty");
   return tmpl;
 }
+
+/*
+// experiment converting only the line that the foreach loop exist on, up to the first opening brace
+function convertForEach(tmpl) {
+
+  var tmplSplit = tmpl.split('@foreach(');
+
+  // if no @foreach loops, return same string as received
+  if(tmplSplit.length === 1) return tmpl;
+
+  // grabs the first bunch of characters of the template affected so you can find and debug it
+  var tmplErrorFinder = " ---- FOUND IN: " + tmpl.substr(0, 50);
+
+  var firstChunk // code before the first '@foreach
+    , newChunks = [];
+  tmplSplit.forEach(function(chunk, i) { // goes through each '@foreach' split
+
+    var splitArr = chunk.split("{") // code before the '@foreach'  ----plus----  code after first '{'
+      , loopLogic = splitArr[0] // code before the '{'
+
+      if(i === 0) {
+        firstChunk = chunk; // code before the first @foreach loop
+      } else {
+
+        var trailingCode = splitArr[1] // code after '{' all the way up to the next '@foreach'
+
+        var itemName;
+        if(loopLogic.indexOf('var ') === -1) { // warn if no 'var' found, as 'var' is the expected variable keyword to be used
+          warn(NS, "convertForEach", "No item variable name detected within 'foreach' loop. It should be defined by 'var' keyword and use a single space to separate it - for example '@foreach(var item ...'. Defaulting to 'item'.", tmplErrorFinder);
+          itemName = "item in "; // if no item variable name is detected, defaults to 'item', and includes the ' in ' so next condition doesn't error
+        }
+        itemName = loopLogic.split('var ')[1]; // gets the variable name, but still includes trailing ' in ...' code
+
+        if(itemName.indexOf(" in ") === -1) { // errors if can't find 'in' keyword
+          throw Error(NS + " - convertForEach - Could not find the 'in' keyword after the variable in 'foreach' loop. Please check your syntax follows this pattern '@foreach(var item in ...'" + tmplErrorFinder);
+        }
+        
+        itemName = itemName.split(" in ")[0]; // separates the variable name from the rest of the code on that line
+
+        var listName = loopLogic.split(" in ")[1].split(")")[0]; // gets the list variable name
+
+        
+        newChunks.push({
+          itemName: itemName
+          , listName: listName
+          , trailingCode: trailingCode
+        });
+      }
+  });
+
+  // builds the new template
+  tmpl = firstChunk;
+  newChunks.forEach(function(chunk, i) {
+    tmpl += '@Html.foreach(' + chunk.listName + ', function('+ chunk.itemName +') {\n' + chunk.loopMarkup + '\n})' + chunk.afterLoop
+  });
+
+  return tmpl;
+}
+*/
 
 function convertForEach(tmpl) {
   
@@ -244,42 +392,57 @@ function convertForEach(tmpl) {
 
       var trailingCode = splitArr[1] // code after '{' all the way up to the next '@foreach'
       
+      var openBraceCount = trailingCode.split("{").length - 1;
+      var closeBraceCount = trailingCode.split("}").length - 1;
+
+      console.log( "trailingCode brace counts", trailingCode, openBraceCount, closeBraceCount );
+      console.log("-------------");
+
+      // checks all opened conditions and operations get closed before continuing  
+      if(closeBraceCount >= openBraceCount) {
+
+        var trailingSplitArr = trailingCode.split("}") // code within this loop  ----plus---- code all the way up to the next '@foreach'
+        
+        var loopMarkupUntrimmed = trailingSplitArr[0]
+          , loopMarkup = getIndent( loopMarkupUntrimmed ) + loopMarkupUntrimmed.trim() // code/markup within the loop (white space trimmed)
+          , afterLoop = trailingSplitArr[1] // code after '}' all the way up to the next '@foreach'
+        
+        //console.log("--", loopMarkupUntrimmed)
+        
+        var itemName;
+        if(loopLogic.indexOf('var ') === -1) { // warn if no 'var' found, as 'var' is the expected variable keyword to be used
+          warn(NS, "convertForEach", "No item variable name detected within 'foreach' loop. It should be defined by 'var' keyword and use a single space to separate it - for example '@foreach(var item ...'. Defaulting to 'item'.", tmplErrorFinder);
+          itemName = "item in "; // if no item variable name is detected, defaults to 'item', and includes the ' in ' so next condition doesn't error
+        }
+        itemName = loopLogic.split('var ')[1]; // gets the variable name, but still includes trailing ' in ...' code
+
+        if(itemName.indexOf(" in ") === -1) { // errors if can't find 'in' keyword
+          throw Error(NS + " - convertForEach - Could not find the 'in' keyword after the variable in 'foreach' loop. Please check your syntax follows this pattern '@foreach(var item in ...'" + tmplErrorFinder);
+        }
+        
+        itemName = itemName.split(" in ")[0]; // separates the variable name from the rest of the code on that line
+
+        var listName = loopLogic.split(" in ")[1].split(")")[0]; // gets the list variable name
+
+        loopMarkup = convertLogicChars(loopMarkup, false);
+
+        
+
+        newChunks.push({
+          itemName: itemName
+          , listName: listName
+          , loopMarkup: loopMarkup
+          , afterLoop: afterLoop
+        });
+      } else {
+        console.log( "trailingCode not closed", trailingCode );
+      }
+
       // if there is a nested @foreach loop ------- WIP
-      if(trailingCode.indexOf("}") !== -1) {
+      // if(trailingCode.indexOf("}") !== -1) {
+        // console.log("trailingCode", trailingCode)
+      // }
 
-      }
-
-      var trailingSplitArr = trailingCode.split("}") // code within this loop  ----plus---- code all the way up to the next '@foreach'
-      
-      var loopMarkupUntrimmed = trailingSplitArr[0]
-        , loopMarkup = getIndent( loopMarkupUntrimmed ) + loopMarkupUntrimmed.trim() // code/markup within the loop (white space trimmed)
-        , afterLoop = trailingSplitArr[1] // code after '}' all the way up to the next '@foreach'
-      
-      //console.log("--", loopMarkupUntrimmed)
-      
-      var itemName;
-      if(loopLogic.indexOf('var ') === -1) { // warn if no 'var' found, as 'var' is the expected variable keyword to be used
-        warn(NS, "convertForEach", "No item variable name detected within 'foreach' loop. It should be defined by 'var' keyword and use a single space to separate it - for example '@foreach(var item ...'. Defaulting to 'item'.", tmplErrorFinder);
-        itemName = "item in "; // if no item variable name is detected, defaults to 'item', and includes the ' in ' so next condition doesn't error
-      }
-      itemName = loopLogic.split('var ')[1]; // gets the variable name, but still includes trailing ' in ...' code
-
-      if(itemName.indexOf(" in ") === -1) { // errors if can't find 'in' keyword
-        throw Error(NS + " - convertForEach - Could not find the 'in' keyword after the variable in 'foreach' loop. Please check your syntax follows this pattern '@foreach(var item in ...'" + tmplErrorFinder);
-      }
-      
-      itemName = itemName.split(" in ")[0]; // separates the variable name from the rest of the code on that line
-
-      var listName = loopLogic.split(" in ")[1].split(")")[0]; // gets the list variable name
-
-      loopMarkup = convertLogicChars(loopMarkup, false);
-
-      newChunks.push({
-        itemName: itemName
-        , listName: listName
-        , loopMarkup: loopMarkup
-        , afterLoop: afterLoop
-      });
 
       
 

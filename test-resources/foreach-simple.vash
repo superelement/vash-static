@@ -1,10 +1,18 @@
 @{
+	//leading comment
+}
+
+@{
 	var list = ["I", " am", " a", " list", " sample"];
 }
 
 
 @foreach(var item in list) {
 	stuff @item stuff
+	
+	@if(condition) {
+		tests nested curly braces
+	}
 }
 
 <p>trailing content</p>
