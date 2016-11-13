@@ -217,6 +217,35 @@ function replaceAllButLast( str, findChar, replaceWithChar ) {
   return newStr;
 }
 
+
+// takes in a template string and searches for opening and closing braces. If there is a trainling closing brace, will replace it with a specified 'closeSpec' character
+function closeSafely(tmpl, closeSpec) {
+  
+  var CLOSE_TEMP = "++CLOSE_TEMP++";
+
+  tmpl = tmpl.replace("}", CLOSE_TEMP); // replaces first close brace with temporary placeholder
+  var closeBraceInd = tmpl.indexOf("}"); // gets the next closing brace, which should be the one we want 
+
+  var safeChunk;
+  if(closeBraceInd === -1) {
+    // if no more closing braces found, revert the temporary placeholder 
+    
+    safeChunk = tmpl.replace(CLOSE_TEMP, "}");
+  } else {
+    // but if another closing brace is found, replace it with a special closing brace
+    
+    // need to recursively loop until only 1 closing brace is found
+    if(tmpl.split("}").length > 2) return closeSafely(tmpl, closeSpec);
+
+    safeChunk = tmpl.splice(closeBraceInd, 1, closeSpec);
+  }
+
+  // remove any remaining temporary placeholders
+  safeChunk = safeChunk.split(CLOSE_TEMP).join("}");
+
+  return safeChunk;
+}
+
 /**
  * @description converts characters `@{` and first trailing `}` to special characters that can be converted back at a later stage
  * @param {string} tmpl - The template string to modify
@@ -229,30 +258,8 @@ function convertLogicChars(tmpl, doSpceial) {
     , CLOSE_ORIG = "}"
     , OPEN_SPEC = "++OPEN++"
     , CLOSE_SPEC = "++CLOSE++"
-    , CLOSE_TEMP = "++CLOSE_TEMP++"
     , newTmpl = "";
   
-
-
-  var closeSafely = function(miniChunk) {
-
-    miniChunk = miniChunk.replace("}", CLOSE_TEMP); // replaces first close brace with temporary placeholder
-    var closeBraceInd = miniChunk.indexOf("}"); // gets the next closing brace, which should be the one we want 
-
-    if(closeBraceInd === -1) {
-      // if no more closing braces found, revert the temporary placeholder 
-      
-      return miniChunk.replace(CLOSE_TEMP, "}");
-    } else {
-      // but if another closing brace is found, replace it with a special closing brace
-      
-      // need to recursively loop until only 1 closing brace is found
-      if(miniChunk.split("}").length > 2) return closeSafely(miniChunk);
-
-      return miniChunk.splice(closeBraceInd, 1, CLOSE_SPEC);
-    }
-  }
-
 
   if(doSpceial) {
 
@@ -272,14 +279,11 @@ function convertLogicChars(tmpl, doSpceial) {
             var newChunk = "";
             openBraceSplit.forEach(function(miniChunk, i) {
               if(i === 0) newChunk += miniChunk;
-              else        newChunk += "{" + closeSafely(miniChunk);
+              else        newChunk += "{" + closeSafely(miniChunk, CLOSE_SPEC);
             });
 
             // in some cases there may be multiple 'CLOSE_SPEC' characters, if subling braces (like if conditions) exist. This function ensures only the last one closes the logic block
             newChunk = replaceAllButLast( newChunk, CLOSE_SPEC, "}");
-
-            // remove any remaining temporary placeholders
-            newChunk = newChunk.split(CLOSE_TEMP).join("}");
 
             newTmpl += newChunk;
           } else {
@@ -308,64 +312,6 @@ function convertStringHelpers(tmpl) {
   return tmpl;
 }
 
-/*
-// experiment converting only the line that the foreach loop exist on, up to the first opening brace
-function convertForEach(tmpl) {
-
-  var tmplSplit = tmpl.split('@foreach(');
-
-  // if no @foreach loops, return same string as received
-  if(tmplSplit.length === 1) return tmpl;
-
-  // grabs the first bunch of characters of the template affected so you can find and debug it
-  var tmplErrorFinder = " ---- FOUND IN: " + tmpl.substr(0, 50);
-
-  var firstChunk // code before the first '@foreach
-    , newChunks = [];
-  tmplSplit.forEach(function(chunk, i) { // goes through each '@foreach' split
-
-    var splitArr = chunk.split("{") // code before the '@foreach'  ----plus----  code after first '{'
-      , loopLogic = splitArr[0] // code before the '{'
-
-      if(i === 0) {
-        firstChunk = chunk; // code before the first @foreach loop
-      } else {
-
-        var trailingCode = splitArr[1] // code after '{' all the way up to the next '@foreach'
-
-        var itemName;
-        if(loopLogic.indexOf('var ') === -1) { // warn if no 'var' found, as 'var' is the expected variable keyword to be used
-          warn(NS, "convertForEach", "No item variable name detected within 'foreach' loop. It should be defined by 'var' keyword and use a single space to separate it - for example '@foreach(var item ...'. Defaulting to 'item'.", tmplErrorFinder);
-          itemName = "item in "; // if no item variable name is detected, defaults to 'item', and includes the ' in ' so next condition doesn't error
-        }
-        itemName = loopLogic.split('var ')[1]; // gets the variable name, but still includes trailing ' in ...' code
-
-        if(itemName.indexOf(" in ") === -1) { // errors if can't find 'in' keyword
-          throw Error(NS + " - convertForEach - Could not find the 'in' keyword after the variable in 'foreach' loop. Please check your syntax follows this pattern '@foreach(var item in ...'" + tmplErrorFinder);
-        }
-        
-        itemName = itemName.split(" in ")[0]; // separates the variable name from the rest of the code on that line
-
-        var listName = loopLogic.split(" in ")[1].split(")")[0]; // gets the list variable name
-
-        
-        newChunks.push({
-          itemName: itemName
-          , listName: listName
-          , trailingCode: trailingCode
-        });
-      }
-  });
-
-  // builds the new template
-  tmpl = firstChunk;
-  newChunks.forEach(function(chunk, i) {
-    tmpl += '@Html.foreach(' + chunk.listName + ', function('+ chunk.itemName +') {\n' + chunk.loopMarkup + '\n})' + chunk.afterLoop
-  });
-
-  return tmpl;
-}
-*/
 
 function convertForEach(tmpl) {
   
