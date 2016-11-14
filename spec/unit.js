@@ -468,6 +468,44 @@ describe("convertStringHelpers", function() {
 	})
 })
 
+describe("closeTemplateBraces", function() {
+	var fun = vashStatic.testable.closeTemplateBraces
+	  , CLOSE_SNIPPET = "++CLOSE_SPECIAL++"
+
+	it("should substitute the closing brace with the snippet when no nested braces exist", function(){
+		var result = fun("stuff }", CLOSE_SNIPPET, true);
+		expect(result).toBe("stuff " + CLOSE_SNIPPET)
+	})
+	
+	// Note, this behaviour is expected, but would probably not be used in the real world
+	it("should fail to substitute the closing brace with the snippet (when no nested braces exist and 'useCloseSnippet' is false)", function(){
+		var result = fun("stuff }", CLOSE_SNIPPET);
+		expect(result).toBe("stuff }")
+	})
+
+
+	it("should substitute only the relevant closing brace with the snippet when nested braces do exist", function(){
+		var result = fun("stuff @if(a){b=c;} }", CLOSE_SNIPPET);
+		expect(result).toBe("stuff @if(a){b=c;} " + CLOSE_SNIPPET)
+	})
+
+	// Note, this behaviour is expected, but would probably not be used in the real world
+	it("should substitute all closing braces with the snippet when nested braces do exist", function(){
+		var result = fun("stuff @if(a){b=c;} }", CLOSE_SNIPPET, true);
+		expect(result).toBe("stuff @if(a){b=c;"+ CLOSE_SNIPPET + " " + CLOSE_SNIPPET)
+	})
+})
+
+
+
+describe("replaceAllButLast", function() {
+	var fun = vashStatic.testable.replaceAllButLast
+
+	it("should replace all cases of 'giraffe' in string with 'monkey'.", function(){
+		expect(fun("I am a giraffe-sized giraffe from giraffe land", 'giraffe', 'monkey')).toBe("I am a monkey-sized monkey from giraffe land")
+	})
+})
+
 /*
 describe("XXXXX", function() {
 	var fun = vashStatic.testable.XXXXX

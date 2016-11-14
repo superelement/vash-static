@@ -175,26 +175,13 @@ function normalizeTemplate(tmplPath, dest, contents, cb) {
 }
 
 
-if (!String.prototype.splice) {
-    /**
-     * {JSDoc}
-     *
-     * The splice() method changes the content of a string by removing a range of
-     * characters and/or adding new characters.
-     *
-     * @this {String}
-     * @param {number} start Index at which to start changing the string.
-     * @param {number} delCount An integer indicating the number of old chars to remove.
-     * @param {string} newSubStr The String that is spliced in.
-     * @return {string} A new string with the spliced substring.
-     */
-    String.prototype.splice = function(start, delCount, newSubStr) {
-        return this.slice(0, start) + newSubStr + this.slice(start + Math.abs(delCount));
-    };
-}
-
-
-// replaces all the chars in a string except the last one
+/**
+ * Takes a string and replaces all the chars in a string except the last one
+ * @param {string} str - The string to modify
+ * @param {string} findChar - The character set for replacement 
+ * @param {string} replaceWithChar - The character to use for replacement
+ * @returns {string} - The modified string. 
+ **/
 function replaceAllButLast( str, findChar, replaceWithChar ) {
   var newStr = ""
     , arr = str.split(findChar);
@@ -218,22 +205,27 @@ function replaceAllButLast( str, findChar, replaceWithChar ) {
 }
 
 
-// takes in a template string and searches for opening and closing braces. If there is a trailing closing brace, will replace it with a specified 'closeSpec' character
-function closeSafely(tmpl, closeSpec, isClosingFE) {
+/**
+ * Takes in a template string and searches for opening and closing braces. If there is more than 1 closing brace, will replace subsequent closing braces with a specified 'closeSpec' character.
+ * @param {string} tmpl - The template string to modify
+ * @param {string} closeSnippet - Pass in a string 'snippet' to replace the closing braces temporarily, while other template conversion operations are happening, making sure to not include the "}" character. For example "++CLOSE_SPECIAL++". 
+ * @param {boolean} useCloseSnippet - Forces the first closing brace to use the given 'closeSnippet'.
+ * @returns {string} - The modified template string. 
+ **/
+function closeTemplateBraces(tmpl, closeSnippet, useCloseSnippet) {
 
-  // debug
-  // firstIsNormal = false
+  if(closeSnippet.indexOf("}") !== -1) {
+    throw Error(NS + " -> closeTemplateBraces -> Your 'closeSnippet' param should not contain a '}' character, as the functions purpose is to substitute that character and logic will break if it exists.");
+  } 
   
-  var CLOSE_TEMP = "++CLOSE_TEMP++";
+  var CLOSE_TEMP = "++CLOSE_TEMP++"
+    , splitArr = tmpl.split("}");
 
-  var splitArr = tmpl.split("}");
-
-  tmpl = tmpl.replace("}", isClosingFE ? closeSpec : CLOSE_TEMP);
+  tmpl = tmpl.replace("}", useCloseSnippet ? closeSnippet : CLOSE_TEMP);
   
   if(tmpl.indexOf("}") !== -1) {
-    tmpl = closeSafely(tmpl, closeSpec, true);
+    tmpl = closeTemplateBraces(tmpl, closeSnippet, true);
   } else {
-
     // remove any remaining temporary placeholders
     tmpl = tmpl.split(CLOSE_TEMP).join("}");
   }
@@ -242,11 +234,11 @@ function closeSafely(tmpl, closeSpec, isClosingFE) {
 }
 
 /**
- * @description converts characters `@{` and first trailing `}` to special characters that can be converted back at a later stage
+ * Converts characters `@{` and first trailing `}` to special characters that can be converted back at a later stage
  * @param {string} tmpl - The template string to modify
  * @param {boolean} doSpceial - If true, will create special snippets. If false, will convert special snippets back to original characters.
- * @return {string} The modified template string. 
- **/ 
+ * @returns {string} - The modified template string. 
+ **/
 function convertLogicChars(openLogic, closeLogic, tmpl, doSpceial) {
 
   var OPEN_ORIG = "@{"
@@ -272,7 +264,7 @@ function convertLogicChars(openLogic, closeLogic, tmpl, doSpceial) {
             var newChunk = "";
             openBraceSplit.forEach(function(miniChunk, i) {
               if(i === 0) newChunk += miniChunk;
-              else        newChunk += "{" + closeSafely(miniChunk, closeLogic);
+              else        newChunk += "{" + closeTemplateBraces(miniChunk, closeLogic);
             });
 
             // in some cases there may be multiple 'closeLogic' characters, if sibling braces (like if conditions) exist. This function ensures only the last one closes the logic block
@@ -297,6 +289,12 @@ function convertLogicChars(openLogic, closeLogic, tmpl, doSpceial) {
   return newTmpl;
 }
 
+
+/**
+ * Converts all 'string' based C# helpers to equivalent Vash helpers.
+ * @param {string} tmpl - Template string to convert.
+ * @returns {string} - The converted string.
+ */
 function convertStringHelpers(tmpl) {
   tmpl = tmpl.split("string.IsNullOrWhiteSpace").join("Html.StringIsNullOrWhiteSpace");
   tmpl = tmpl.split("String.IsNullOrWhiteSpace").join("Html.StringIsNullOrWhiteSpace");
@@ -306,58 +304,11 @@ function convertStringHelpers(tmpl) {
 }
 
 
-function removeEmptyStringsFromArr(arr) {
-  
-  var newArr = [];
-  arr.forEach(function(str) {
-    if(str) newArr.push(str);
-  });
-
-  return newArr;
-}
-
-/*
-function convertForEach(tmpl) {
-
-  var OPEN_FE = '@foreach('
-    , OPEN_LOGIC = "++OPEN++"
-    , CLOSE_LOGIC = "++CLOSE++"
-    , letters = ["i","j","k","l","m","n","o","p","q","r","s","t","u","v","w","x","y","z"]
-
-  var tmplSplit = tmpl.split(OPEN_FE);
-
-  // if no @foreach loops, return same string as received
-  if(tmplSplit.length === 1) return tmpl;
-
-  // grabs the first bunch of characters of the template affected so you can find and debug it
-  var tmplErrorFinder = " ---- FOUND IN: " + tmpl.substr(0, 50);
-
-  var newTmpl = "";
-  tmplSplit.forEach(function(chunk, i) { // goes through each '@foreach' split
-
-    chunk = convertLogicChars(OPEN_LOGIC, CLOSE_LOGIC, chunk, true);
-
-    var splitArr = chunk.split("{") // code before the '@foreach'  ----plus----  code after first '{'
-      , loopLogic = splitArr[0] // code before the '{'
-      , trailingCode = getAllButFirst(chunk, "{") // code after '{' all the way up to the next '@foreach'
-
-    if(i === 0) {
-      newTmpl += chunk;
-    } else {
-
-      // trailing code needs to get rid of first opening brace because it's part of for loop
-      newTmpl += getForEachLogic( loopLogic, letters[i-1], tmplErrorFinder ) + trailingCode.replace("{", ""); 
-    }
-  })
-
-  // now replace the markers with proper syntax for vash helper
-  newTmpl = newTmpl.split(OPEN_LOGIC).join("@{");
-  newTmpl = newTmpl.split(CLOSE_LOGIC).join("}");
-
-  return newTmpl;
-}
-*/
-
+/**
+ * Takes a template and converts all C# 'forEach' loops into Vash helper foreach loops. This is tricky because the closing braces are '})' for JS/Vash, but only '}' for C#.
+ * @param {string} tmpl - Template string to convert.
+ * @returns {string} - The converted string.
+ */
 function convertForEach(tmpl) {
   
   var OPEN_FE = '@foreach('
@@ -388,14 +339,12 @@ function convertForEach(tmpl) {
 
       newTmpl += getForEachLogic( loopLogic, tmplErrorFinder );
 
-      // var openFESplit = removeEmptyStringsFromArr( trailingCode.split("{") );
       var openFESplit = trailingCode.split("{");
 
       // if nested braces detected, replace only the appropriate closing brace character and not the nested ones
       if(openFESplit.length > 1) {
         
-        var newChunk = ""
-          // , firstIsNormal = openFESplit.length >= 2; // if there are nested open braces, this ensures that the first closing brace is '}' instead of '})'
+        var newChunk = "";
         
         openFESplit.forEach(function(miniChunk, j) {
           if(j === 0) {
@@ -404,10 +353,8 @@ function convertForEach(tmpl) {
 
             // if there is a closing brace before any opening braces (which is why index 1 is a condition)
             var isClosingFE = miniChunk.indexOf("}") !== -1 && j === 1;
-
-            // if(i > 1)
             
-            newChunk += "{" + closeSafely(miniChunk, CLOSE_FE, isClosingFE );
+            newChunk += "{" + closeTemplateBraces(miniChunk, CLOSE_FE, isClosingFE );
           }
         });
 
@@ -419,10 +366,8 @@ function convertForEach(tmpl) {
         newTmpl += trailingCode.split("}").join(CLOSE_FE);
       }
     }
-  })
+  });
 
-  /*
-  */
   // now replace the markers with proper syntax for vash helper
   newTmpl = newTmpl.split(CLOSE_FE).join("})");
   newTmpl = newTmpl.split(OPEN_LOGIC).join("@{");
@@ -432,6 +377,13 @@ function convertForEach(tmpl) {
 }
 
 
+
+/**
+ * Gets segment of template string after first instance of a specified 'splitChar' character until the end of that string.
+ * @param {string} tmpl - Template string to convert.
+ * @param {string} splitChar - Character used to split.
+ * @returns {string} - Combined string. 
+ */
 function getAllButFirst( tmpl, splitChar ) {
   var splitArr = tmpl.split(splitChar);
 
@@ -443,18 +395,20 @@ function getAllButFirst( tmpl, splitChar ) {
   return newStr;
 }
 
-/*
-// gets the converted C# foreach logic as a for loop
-function getForEachLogic( loopLogic, letter, tmplErrorFinder ) {
-  
-  if(!letter) letter = "i";
 
+/**
+ * Converts C# 'foreach' statement logic to work with Vash Helper 'foreach'.
+ * @param {string} statementLogic - Code from 'foreach' until the opening brace.
+ * @param {string} tmplErrorFinder - Chunk of HTML from the template to aid in finding the correct file to debug. 
+ * @returns {string} - The Vash helper 'foreach' statement logic.
+ */
+function getForEachLogic( statementLogic, tmplErrorFinder ) {
   var itemName;
-  if(loopLogic.indexOf('var ') === -1) { // warn if no 'var' found, as 'var' is the expected variable keyword to be used
+  if(statementLogic.indexOf('var ') === -1) { // warn if no 'var' found, as 'var' is the expected variable keyword to be used
     warn(NS, "convertForEach", "No item variable name detected within 'foreach' loop. It should be defined by 'var' keyword and use a single space to separate it - for example '@foreach(var item ...'. Defaulting to 'item'.", tmplErrorFinder);
     itemName = "item in "; // if no item variable name is detected, defaults to 'item', and includes the ' in ' so next condition doesn't error
   }
-  itemName = loopLogic.split('var ')[1]; // gets the variable name, but still includes trailing ' in ...' code
+  itemName = statementLogic.split('var ')[1]; // gets the variable name, but still includes trailing ' in ...' code
 
   if(itemName.indexOf(" in ") === -1) { // errors if can't find 'in' keyword
     throw Error(NS + " - convertForEach - Could not find the 'in' keyword after the variable in 'foreach' loop. Please check your syntax follows this pattern '@foreach(var item in ...'" + tmplErrorFinder);
@@ -462,61 +416,12 @@ function getForEachLogic( loopLogic, letter, tmplErrorFinder ) {
   
   itemName = itemName.split(" in ")[0]; // separates the variable name from the rest of the code on that line
 
-  var listName = loopLogic.split(" in ")[1].split(")")[0]; // gets the list variable name
-
-  return '@for(var '+letter+'=0; '+letter+'<('+listName+'.length); i++) {\nvar '+itemName+' = '+ listName +'['+letter+'];\n';
-  // return '@Html.foreach(' + listName + ', function('+ itemName +') ';
-}
-*/
-
-// gets the converted C# foreach logic as Vash Helper
-function getForEachLogic( loopLogic, tmplErrorFinder ) {
-  var itemName;
-  if(loopLogic.indexOf('var ') === -1) { // warn if no 'var' found, as 'var' is the expected variable keyword to be used
-    warn(NS, "convertForEach", "No item variable name detected within 'foreach' loop. It should be defined by 'var' keyword and use a single space to separate it - for example '@foreach(var item ...'. Defaulting to 'item'.", tmplErrorFinder);
-    itemName = "item in "; // if no item variable name is detected, defaults to 'item', and includes the ' in ' so next condition doesn't error
-  }
-  itemName = loopLogic.split('var ')[1]; // gets the variable name, but still includes trailing ' in ...' code
-
-  if(itemName.indexOf(" in ") === -1) { // errors if can't find 'in' keyword
-    throw Error(NS + " - convertForEach - Could not find the 'in' keyword after the variable in 'foreach' loop. Please check your syntax follows this pattern '@foreach(var item in ...'" + tmplErrorFinder);
-  }
-  
-  itemName = itemName.split(" in ")[0]; // separates the variable name from the rest of the code on that line
-
-  var listName = loopLogic.split(" in ")[1].split(")")[0]; // gets the list variable name
+  var listName = statementLogic.split(" in ")[1].split(")")[0]; // gets the list variable name
 
   return '@Html.foreach(' + listName + ', function('+ itemName +') ';
 }
 
 
-// gets the indentation of a code block after the first line break
-function getIndent(tmpl) {
-
-  tmpl = tmpl.split('\r').join('\n'); // normalizes line breaks for code editor differences
-
-  var lineBreakIndex = tmpl.indexOf('\n');
-  if(lineBreakIndex !== -1) {
-    
-    tmpl.split('\n').forEach(function(line) {
-      // gets first single line that contains code other than white space
-      if(line.trim()) tmpl = line.split('\n')[0];
-    })
-  }
-
-  var indent = "", nonSpaceFound = false;
-  
-  //console.log("tmpl", tmpl)
-  // loops through first single line of code and returns space and tab characters up until first non-white space character
-  tmpl.split("").forEach(function(char) {
-    var isWhiteSpace = char.trim() === '';
-
-    if(!nonSpaceFound && isWhiteSpace) indent += char;
-    else nonSpaceFound = true;
-  });
-
-  return indent;
-}
 
 /**
  * Makes vash syntax more like Razor for C#
@@ -591,6 +496,10 @@ function getModuleName(filePath, type, inclFileName) {
 }
 
 
+/**
+ * Adds custom Vash helpers to the compilation.
+ * @param {string} newHelpers - and array of paths pointing to additional Vash helpers. If same name as defaults are used, they will override defaults.
+ */
 function setCustomHelpers(newHelpers) {
 
   // if no helpers supplied, use defaults
@@ -690,7 +599,6 @@ function getDirTypeFromPath(filePath, dirTypes) {
  * @param {string} path - Directory path to check.
  * @returns {string} Path with guarunteed trailing slash.
  */
-
 function ensureTrainlingSlash(filePath) {
     if(filePath.substr(filePath.length - 1) !== "/") filePath += "/";
     return filePath;
@@ -857,7 +765,8 @@ module.exports = {
     , setCustomHelpers: setCustomHelpers
     , convertForEach: convertForEach
     , convertStringHelpers: convertStringHelpers
-    , getIndent: getIndent // TODO: tests
     , convertLogicChars: convertLogicChars
+    , closeTemplateBraces: closeTemplateBraces
+    , replaceAllButLast: replaceAllButLast
   }
 }
