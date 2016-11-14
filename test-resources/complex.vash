@@ -15,12 +15,17 @@
 
 
 @foreach(var item1 in list) {
-	stuff
-	@{
-		var someProp = "1";
-	}
-	@foreach(var item2 in item1.list) {
-		stuff @item1 stuff
-		stuff @item2 stuff
-	}
+	<p>
+		stuff
+	</p>
+		@{
+			var someProp = "1";
+		}
+
+		<p>stuff</p>
+
+		@foreach(var item2 in item1.list) {
+			<p>stuff @item1 stuff
+			stuff @item2 stuff</p>
+		}
 }

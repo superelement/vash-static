@@ -1,0 +1,22 @@
+@{
+	var list = [{
+		list: ["I", " am", " a", " list", " sample"]
+	}];
+	var condition = true;
+}
+
+
+@foreach(var item1 in list) {
+	<p>stuff</p>
+	@{
+		var someProp = "1";
+	}
+	@foreach(var item2 in item1.list) {
+		<p>stuff @item1 stuff
+		stuff @item2 stuff</p>
+	}
+	@if(condition) {
+		<p>stuff</p>
+	}
+	<p>more stuff</p>
+}

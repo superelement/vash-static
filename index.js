@@ -218,32 +218,27 @@ function replaceAllButLast( str, findChar, replaceWithChar ) {
 }
 
 
-// takes in a template string and searches for opening and closing braces. If there is a trainling closing brace, will replace it with a specified 'closeSpec' character
-function closeSafely(tmpl, closeSpec) {
+// takes in a template string and searches for opening and closing braces. If there is a trailing closing brace, will replace it with a specified 'closeSpec' character
+function closeSafely(tmpl, closeSpec, isClosingFE) {
+
+  // debug
+  // firstIsNormal = false
   
   var CLOSE_TEMP = "++CLOSE_TEMP++";
 
-  tmpl = tmpl.replace("}", CLOSE_TEMP); // replaces first close brace with temporary placeholder
-  var closeBraceInd = tmpl.indexOf("}"); // gets the next closing brace, which should be the one we want 
+  var splitArr = tmpl.split("}");
 
-  var safeChunk;
-  if(closeBraceInd === -1) {
-    // if no more closing braces found, revert the temporary placeholder 
-    
-    safeChunk = tmpl.replace(CLOSE_TEMP, "}");
+  tmpl = tmpl.replace("}", isClosingFE ? closeSpec : CLOSE_TEMP);
+  
+  if(tmpl.indexOf("}") !== -1) {
+    tmpl = closeSafely(tmpl, closeSpec, true);
   } else {
-    // but if another closing brace is found, replace it with a special closing brace
-    
-    // need to recursively loop until only 1 closing brace is found
-    if(tmpl.split("}").length > 2) return closeSafely(tmpl, closeSpec);
 
-    safeChunk = tmpl.splice(closeBraceInd, 1, closeSpec);
+    // remove any remaining temporary placeholders
+    tmpl = tmpl.split(CLOSE_TEMP).join("}");
   }
 
-  // remove any remaining temporary placeholders
-  safeChunk = safeChunk.split(CLOSE_TEMP).join("}");
-
-  return safeChunk;
+  return tmpl;
 }
 
 /**
@@ -252,12 +247,10 @@ function closeSafely(tmpl, closeSpec) {
  * @param {boolean} doSpceial - If true, will create special snippets. If false, will convert special snippets back to original characters.
  * @return {string} The modified template string. 
  **/ 
-function convertLogicChars(tmpl, doSpceial) {
+function convertLogicChars(openLogic, closeLogic, tmpl, doSpceial) {
 
   var OPEN_ORIG = "@{"
     , CLOSE_ORIG = "}"
-    , OPEN_SPEC = "++OPEN++"
-    , CLOSE_SPEC = "++CLOSE++"
     , newTmpl = "";
   
 
@@ -269,7 +262,7 @@ function convertLogicChars(tmpl, doSpceial) {
           newTmpl += chunk;
         } else {
 
-          newTmpl += OPEN_SPEC;
+          newTmpl += openLogic;
 
           var openBraceSplit = chunk.split("{");
 
@@ -279,16 +272,16 @@ function convertLogicChars(tmpl, doSpceial) {
             var newChunk = "";
             openBraceSplit.forEach(function(miniChunk, i) {
               if(i === 0) newChunk += miniChunk;
-              else        newChunk += "{" + closeSafely(miniChunk, CLOSE_SPEC);
+              else        newChunk += "{" + closeSafely(miniChunk, closeLogic);
             });
 
-            // in some cases there may be multiple 'CLOSE_SPEC' characters, if sibling braces (like if conditions) exist. This function ensures only the last one closes the logic block
-            newChunk = replaceAllButLast( newChunk, CLOSE_SPEC, "}");
+            // in some cases there may be multiple 'closeLogic' characters, if sibling braces (like if conditions) exist. This function ensures only the last one closes the logic block
+            newChunk = replaceAllButLast( newChunk, closeLogic, "}");
 
             newTmpl += newChunk;
           } else {
             // if there are no nested braces, it is much simpler
-            newTmpl += chunk.split(CLOSE_ORIG).join(CLOSE_SPEC);
+            newTmpl += chunk.split(CLOSE_ORIG).join(closeLogic);
           }
         }
       });
@@ -297,7 +290,7 @@ function convertLogicChars(tmpl, doSpceial) {
     }
   } else {
     // converts special snippets back to originals
-    newTmpl = tmpl.split(OPEN_SPEC).join(OPEN_ORIG).split(CLOSE_SPEC).join(CLOSE_ORIG);
+    newTmpl = tmpl.split(openLogic).join(OPEN_ORIG).split(closeLogic).join(CLOSE_ORIG);
   }
 
 
@@ -313,10 +306,23 @@ function convertStringHelpers(tmpl) {
 }
 
 
-function convertForEach(tmpl) {
+function removeEmptyStringsFromArr(arr) {
   
+  var newArr = [];
+  arr.forEach(function(str) {
+    if(str) newArr.push(str);
+  });
+
+  return newArr;
+}
+
+/*
+function convertForEach(tmpl) {
+
   var OPEN_FE = '@foreach('
-    , CLOSE_FE = '++CLOSE_FE++';
+    , OPEN_LOGIC = "++OPEN++"
+    , CLOSE_LOGIC = "++CLOSE++"
+    , letters = ["i","j","k","l","m","n","o","p","q","r","s","t","u","v","w","x","y","z"]
 
   var tmplSplit = tmpl.split(OPEN_FE);
 
@@ -329,8 +335,7 @@ function convertForEach(tmpl) {
   var newTmpl = "";
   tmplSplit.forEach(function(chunk, i) { // goes through each '@foreach' split
 
-
-    chunk = convertLogicChars(chunk, true);
+    chunk = convertLogicChars(OPEN_LOGIC, CLOSE_LOGIC, chunk, true);
 
     var splitArr = chunk.split("{") // code before the '@foreach'  ----plus----  code after first '{'
       , loopLogic = splitArr[0] // code before the '{'
@@ -340,39 +345,88 @@ function convertForEach(tmpl) {
       newTmpl += chunk;
     } else {
 
+      // trailing code needs to get rid of first opening brace because it's part of for loop
+      newTmpl += getForEachLogic( loopLogic, letters[i-1], tmplErrorFinder ) + trailingCode.replace("{", ""); 
+    }
+  })
 
-      // console.log("loopLogic", getForEachLogic( loopLogic ) );
+  // now replace the markers with proper syntax for vash helper
+  newTmpl = newTmpl.split(OPEN_LOGIC).join("@{");
+  newTmpl = newTmpl.split(CLOSE_LOGIC).join("}");
 
-      newTmpl += getForEachLogic( loopLogic );
+  return newTmpl;
+}
+*/
 
+function convertForEach(tmpl) {
+  
+  var OPEN_FE = '@foreach('
+    , CLOSE_FE = '++CLOSE_FE++'
+    , OPEN_LOGIC = "++OPEN++"
+    , CLOSE_LOGIC = "++CLOSE++";
+
+  var tmplSplit = tmpl.split(OPEN_FE);
+
+  // if no @foreach loops, return same string as received
+  if(tmplSplit.length === 1) return tmpl;
+
+  // grabs the first bunch of characters of the template affected so you can find and debug it
+  var tmplErrorFinder = " ---- FOUND IN: " + tmpl.substr(0, 50);
+
+  var newTmpl = "";
+  tmplSplit.forEach(function(chunk, i) { // goes through each '@foreach' split
+
+    chunk = convertLogicChars(OPEN_LOGIC, CLOSE_LOGIC, chunk, true);
+
+    var splitArr = chunk.split("{") // code before the '@foreach'  ----plus----  code after first '{'
+      , loopLogic = splitArr[0] // code before the '{'
+      , trailingCode = getAllButFirst(chunk, "{") // code after '{' all the way up to the next '@foreach'
+
+    if(i === 0) {
+      newTmpl += chunk;
+    } else {
+
+      newTmpl += getForEachLogic( loopLogic, tmplErrorFinder );
+
+      // var openFESplit = removeEmptyStringsFromArr( trailingCode.split("{") );
       var openFESplit = trailingCode.split("{");
-
-      // console.log("trailingCode", trailingCode)
 
       // if nested braces detected, replace only the appropriate closing brace character and not the nested ones
       if(openFESplit.length > 1) {
-
-
-        var newChunk = "";
+        
+        var newChunk = ""
+          // , firstIsNormal = openFESplit.length >= 2; // if there are nested open braces, this ensures that the first closing brace is '}' instead of '})'
+        
         openFESplit.forEach(function(miniChunk, j) {
-          if(j === 0) newChunk += miniChunk;
-          else        newChunk += "{" + closeSafely(miniChunk, CLOSE_FE);
+          if(j === 0) {
+            newChunk += miniChunk;
+          } else {
+
+            // if there is a closing brace before any opening braces (which is why index 1 is a condition)
+            var isClosingFE = miniChunk.indexOf("}") !== -1 && j === 1;
+
+            // if(i > 1)
+            
+            newChunk += "{" + closeSafely(miniChunk, CLOSE_FE, isClosingFE );
+          }
         });
-
-        console.log("newChunk", newChunk);
-
-        // in some cases there may be multiple 'CLOSE_FE' characters, if sibling braces (like if conditions) exist. This function ensures only the last one closes the logic block
-        newChunk = replaceAllButLast( newChunk, CLOSE_FE, "}");
 
         newTmpl += newChunk;
 
       } else {
+        // console.log("--trailingCode", trailingCode)
         // if there are no nested braces, it is much simpler
         newTmpl += trailingCode.split("}").join(CLOSE_FE);
       }
-
     }
   })
+
+  /*
+  */
+  // now replace the markers with proper syntax for vash helper
+  newTmpl = newTmpl.split(CLOSE_FE).join("})");
+  newTmpl = newTmpl.split(OPEN_LOGIC).join("@{");
+  newTmpl = newTmpl.split(CLOSE_LOGIC).join("}");
 
   return newTmpl;
 }
@@ -389,8 +443,34 @@ function getAllButFirst( tmpl, splitChar ) {
   return newStr;
 }
 
+/*
+// gets the converted C# foreach logic as a for loop
+function getForEachLogic( loopLogic, letter, tmplErrorFinder ) {
+  
+  if(!letter) letter = "i";
+
+  var itemName;
+  if(loopLogic.indexOf('var ') === -1) { // warn if no 'var' found, as 'var' is the expected variable keyword to be used
+    warn(NS, "convertForEach", "No item variable name detected within 'foreach' loop. It should be defined by 'var' keyword and use a single space to separate it - for example '@foreach(var item ...'. Defaulting to 'item'.", tmplErrorFinder);
+    itemName = "item in "; // if no item variable name is detected, defaults to 'item', and includes the ' in ' so next condition doesn't error
+  }
+  itemName = loopLogic.split('var ')[1]; // gets the variable name, but still includes trailing ' in ...' code
+
+  if(itemName.indexOf(" in ") === -1) { // errors if can't find 'in' keyword
+    throw Error(NS + " - convertForEach - Could not find the 'in' keyword after the variable in 'foreach' loop. Please check your syntax follows this pattern '@foreach(var item in ...'" + tmplErrorFinder);
+  }
+  
+  itemName = itemName.split(" in ")[0]; // separates the variable name from the rest of the code on that line
+
+  var listName = loopLogic.split(" in ")[1].split(")")[0]; // gets the list variable name
+
+  return '@for(var '+letter+'=0; '+letter+'<('+listName+'.length); i++) {\nvar '+itemName+' = '+ listName +'['+letter+'];\n';
+  // return '@Html.foreach(' + listName + ', function('+ itemName +') ';
+}
+*/
+
 // gets the converted C# foreach logic as Vash Helper
-function getForEachLogic( loopLogic ) {
+function getForEachLogic( loopLogic, tmplErrorFinder ) {
   var itemName;
   if(loopLogic.indexOf('var ') === -1) { // warn if no 'var' found, as 'var' is the expected variable keyword to be used
     warn(NS, "convertForEach", "No item variable name detected within 'foreach' loop. It should be defined by 'var' keyword and use a single space to separate it - for example '@foreach(var item ...'. Defaulting to 'item'.", tmplErrorFinder);

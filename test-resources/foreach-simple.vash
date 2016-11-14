@@ -8,11 +8,7 @@
 
 
 @foreach(var item in list) {
-	stuff @item stuff
-	
-	@if(condition) {
-		tests nested curly braces
-	}
+	<p>stuff @item stuff</p>
 }
 
 <p>trailing content</p>

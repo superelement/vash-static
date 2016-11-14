@@ -15,7 +15,7 @@ afterEach(function() {
 	//fs.removeSync(TEMP_DIR);
 })
 
-xdescribe("normalizeRazorSyntax", function() {
+describe("normalizeRazorSyntax", function() {
 
 	var fun = vashStatic.testable.normalizeRazorSyntax
 	  , start = "@*VASH_IGNORE_START*@"
@@ -57,16 +57,18 @@ xdescribe("normalizeRazorSyntax", function() {
 })
 
 
-xdescribe("normalizeTemplate", function() {
+describe("normalizeTemplate", function() {
 	var fun = vashStatic.testable.normalizeTemplate
 	  , tmplPath = TEST_RES + "complex.vash"
 	  , dest = TEMP_DIR + "normalizeTemplate/complex.cshtml"
 	  , originalContents = fs.readFileSync(tmplPath).toString()
-	  , normalizedContents = function() { return vashStatic.testable.normalizeRazorSyntax(originalContents) } // using function so 'xdescribe' doesn't execute it
+	  , normalizedContents = function() { return vashStatic.testable.normalizeRazorSyntax(originalContents) } // using function so 'describe' doesn't execute it
 
 	it("should read a template from file system, then save it to the destination file path and pass the same contents to the callback", function(done) {
 		fun(tmplPath, dest, null, function(contents) {
 			expect(contents).toBe(fs.readFileSync(dest).toString())
+			
+			tryToCompile(contents)
 			done()
 		})
 	})
@@ -74,20 +76,24 @@ xdescribe("normalizeTemplate", function() {
 	it("should pass in template contents and expect it to be 'normalized' in the destination output", function(done) {
 		fun(null, dest, originalContents, function(contents) {
 			expect(contents).not.toBe(originalContents)
-			expect(contents).toBe(normalizedContents)
+			expect(contents).toBe(normalizedContents())
+			
+			tryToCompile(contents)
 			done()
 		})
 	})
 	
 	it("should still return contents if 'dest' is not given", function(done) {
 		fun(tmplPath, null, null, function(contents) {
-			expect(contents).toBe(normalizedContents)
+			expect(contents).toBe(normalizedContents())
+			
+			tryToCompile(contents)
 			done()
 		})
 	})
 })
 
-xdescribe("getFileName", function() {
+describe("getFileName", function() {
 	var fun = vashStatic.getFileName
 
 	it("should get just the file name from a path, without the extension", function() {
@@ -101,7 +107,7 @@ xdescribe("getFileName", function() {
 	})
 })
 
-xdescribe("regSlash", function() {
+describe("regSlash", function() {
 	var fun = vashStatic.testable.regSlash
 
 	it("should escape common regular expression characters", function() {
@@ -110,7 +116,7 @@ xdescribe("regSlash", function() {
 	})
 })
 
-xdescribe("loadTmplCache", function() {
+describe("loadTmplCache", function() {
 	var fun = vashStatic.testable.loadTmplCache
 
 	it("should load a valid json file (synchronously) and check it's contents", function() {
@@ -136,7 +142,7 @@ xdescribe("loadTmplCache", function() {
 })
 
 
-xdescribe("getTemplateFromCache", function() {
+describe("getTemplateFromCache", function() {
 	var fun = vashStatic.testable.getTemplateFromCache
 
 	it("should return a template from cache, by name", function() {
@@ -155,7 +161,7 @@ xdescribe("getTemplateFromCache", function() {
 })
 
 
-xdescribe("prependModels", function() {
+describe("prependModels", function() {
 	var fun = vashStatic.testable.prependModels
 	  , tmpl = "sample template"
 	  , modelsFilePath = TEST_RES+"models.js"
@@ -174,7 +180,7 @@ xdescribe("prependModels", function() {
 	})
 })
 
-xdescribe("getDirTypeFromPath", function() {
+describe("getDirTypeFromPath", function() {
 	var fun = vashStatic.getDirTypeFromPath
 	  , dirTypes = ["pg", "wg", "glb"]
 
@@ -193,7 +199,7 @@ xdescribe("getDirTypeFromPath", function() {
 
 
 
-xdescribe("getModuleName", function() {
+describe("getModuleName", function() {
 	var fun = vashStatic.getModuleName
 
 	it("should get just the module name", function(){
@@ -213,16 +219,25 @@ xdescribe("getModuleName", function() {
 	})
 })
 
-xdescribe("compileTemplate", function() {
+describe("compileTemplate", function() {
 	var fun = vashStatic.testable.compileTemplate
 
 	it("should compile a simple razor string, using @Model syntax", function(){
 		var precompiled = fun("<p>@Model.Title</p>")
 		expect(precompiled({Title: "Vash Static"})).toBe("<p>Vash Static</p>")
 	})
+
+	it("should compile a simple razor string from 'simple.vash'", function(){
+
+		var sample = fs.readFileSync(TEST_RES + "simple.vash").toString();
+		var precompiled = fun(sample);
+		var contents = precompiled({});
+
+		expect(contents).toContain("Simple template");
+	})
 })
 
-xdescribe("setCustomHelpers", function() {
+describe("setCustomHelpers", function() {
 	var fun = vashStatic.testable.setCustomHelpers
 
 	it("should render a template using the default helper 'foreach'", function(){
@@ -237,7 +252,7 @@ xdescribe("setCustomHelpers", function() {
 		expect(precompiled()).toBe("Example of custom helper")
 	})
 
-	xdescribe("StringIsNullOrEmpty", function() {
+	describe("StringIsNullOrEmpty", function() {
 
 		it("Helper StringIsNullOrEmpty should include the code in condition, based on the provided string being empty", function() {
 			fun()
@@ -262,7 +277,7 @@ xdescribe("setCustomHelpers", function() {
 		})
 	})
 
-	xdescribe("StringIsNullOrWhiteSpace", function() {
+	describe("StringIsNullOrWhiteSpace", function() {
 
 		it("Helper StringIsNullOrWhiteSpace should include the code in condition, based on the provided string containing only spaces", function() {
 			fun()
@@ -288,7 +303,7 @@ xdescribe("setCustomHelpers", function() {
 	})
 })
 
-xdescribe("renderPage", function() {
+describe("renderPage", function() {
 	var fun = vashStatic.renderPage
 
 	it("should render page 'pg_about/Index' from the sample template cache, which contains a 'glb__Layout' and foreach helper", function(){
@@ -299,7 +314,7 @@ xdescribe("renderPage", function() {
 	})
 })
 
-xdescribe("updateCache", function() {
+describe("updateCache", function() {
 	var fun = vashStatic.updateCache
 
 	it("should update the template cache with the 'pg/home/Index.vash' sample page", function(done){
@@ -324,7 +339,7 @@ xdescribe("updateCache", function() {
 })
 
 
-xdescribe("precompileTemplateCache", function() {
+describe("precompileTemplateCache", function() {
 	var fun = vashStatic.precompileTemplateCache
 
 	it("should return a precompiled template function as a string, so it can be stored in a JSON file", function(done){
@@ -346,7 +361,7 @@ xdescribe("precompileTemplateCache", function() {
 	})
 })
 
-xdescribe("convertLogicChars", function() {
+describe("convertLogicChars", function() {
 	var fun = vashStatic.testable.convertLogicChars
 
 	var OPEN_ORIG = "@{"
@@ -355,17 +370,17 @@ xdescribe("convertLogicChars", function() {
       , CLOSE_SPEC = "++CLOSE++"
 
 	it("should convert '"+OPEN_ORIG+"' and '"+CLOSE_ORIG+"' to special character snippets", function(){
-		expect( fun('stuff ' + OPEN_ORIG+" stuff "+CLOSE_ORIG, true) ).toBe('stuff ' + OPEN_SPEC+" stuff "+CLOSE_SPEC);
+		expect( fun(OPEN_SPEC, CLOSE_SPEC, 'stuff ' + OPEN_ORIG+" stuff "+CLOSE_ORIG, true) ).toBe('stuff ' + OPEN_SPEC+" stuff "+CLOSE_SPEC);
 	})
 
 	it("should only convert closing brace related to logic opener when an if condition gets thrown into the mix", function(){
 		var contents = " stuff if(another) { brace example } ";
-		expect( fun('stuff ' + OPEN_ORIG+ contents +CLOSE_ORIG, true) ).toBe('stuff ' + OPEN_SPEC+ contents +CLOSE_SPEC);
+		expect( fun(OPEN_SPEC, CLOSE_SPEC, 'stuff ' + OPEN_ORIG+ contents +CLOSE_ORIG, true) ).toBe('stuff ' + OPEN_SPEC+ contents +CLOSE_SPEC);
 	})
 
 	it("should only convert closing brace related to logic opener when multiple if conditions get thrown into the mix", function(){
 		var contents = " stuff \n if(first) { \n brace example \n if(second) { \n brace example \n if(third) { \n brace example } \n } \n if(fouth) { \n brace example \n } \n } ";
-		expect( fun('stuff ' + OPEN_ORIG+ contents +CLOSE_ORIG, true) ).toBe('stuff ' + OPEN_SPEC+ contents +CLOSE_SPEC);
+		expect( fun(OPEN_SPEC, CLOSE_SPEC, 'stuff ' + OPEN_ORIG+ contents +CLOSE_ORIG, true) ).toBe('stuff ' + OPEN_SPEC+ contents +CLOSE_SPEC);
 	})
 })
 
@@ -375,15 +390,16 @@ describe("convertForEach", function() {
 	var fun = vashStatic.testable.convertForEach
 	  , originalForEachSimple = fs.readFileSync(TEST_RES + "foreach-simple.vash").toString()
 	  , originalForEachMultiLine = fs.readFileSync(TEST_RES + "foreach-multi-line.vash").toString()
-	  , originalForEachNested = fs.readFileSync(TEST_RES + "foreach-nested.vash").toString()
+	  , originalForEachNested1 = fs.readFileSync(TEST_RES + "foreach-nested-1.vash").toString()
+	  , originalForEachNested2 = fs.readFileSync(TEST_RES + "foreach-nested-2.vash").toString()
 
-	xit("should should convert a simple C# razor `@foreach` loop into vash a compatible one", function(){
+	it("should should convert a simple C# razor `@foreach` loop into vash a compatible one", function(){
 		// enables warnings and logs for this test
 		vashStatic.testable.suppressWarnings(false);
 		
 		var contents = fixLineReturns( fun(originalForEachSimple) )
 		//console.log("contents", contents)
-		expect(contents).toContain('@Html.foreach(list, function(item) {\n\tstuff @item stuff\n})')
+		expect(contents).toContain('@Html.foreach(list, function(item) {\n\t<p>stuff @item stuff</p>\n})')
 		
 		// also ensure training content exists
 		expect(contents).toContain('<p>trailing content</p>')
@@ -394,35 +410,54 @@ describe("convertForEach", function() {
 		vashStatic.testable.suppressWarnings(true);
 	})
 	
-	xit("should should convert a mutli-line C# razor `@foreach` loop into vash a compatible one", function(){
+	it("should should convert a mutli-line C# razor `@foreach` loop into vash a compatible one", function(){
 		// enables warnings and logs for this test
 		vashStatic.testable.suppressWarnings(false);
 		
 		var contents = fixLineReturns( fun(originalForEachMultiLine) )
 		//console.log("contents", contents)
-		expect(contents).toContain('@Html.foreach(list, function(item) {\n\tstuff @item stuff\n\tstuff @item stuff\n})')
+		expect(contents).toContain('@Html.foreach(list, function(item) {\n\t<p>stuff @item stuff\n\tstuff @item stuff</p>\n})')
 		
 		// suppresses warnings and logs again
 		vashStatic.testable.suppressWarnings(true);
 	})
 	
-	// WIP
-	it("should should convert a nested C# razor `@foreach` loop into vash a compatible one", function(){
+	
+	it("should should convert a nested 1 C# razor `@foreach` loop into vash a compatible one", function(){
 		// enables warnings and logs for this test
 		vashStatic.testable.suppressWarnings(false);
 		
-		var contents = fixLineReturns( fun(originalForEachNested) )
+		var contents = fixLineReturns( fun(originalForEachNested1) )
+
+		// for debugging
+		// fs.outputFileSync( TEMP_DIR + "convertForEach/foreach-nested-1.vash", contents );
+
+		tryToCompile(contents)
+		
+		// suppresses warnings and logs again
+		vashStatic.testable.suppressWarnings(true);
+	})
+
+	// WIP
+	it("should should convert a nested 2 C# razor `@foreach` loop into vash a compatible one", function(){
+		// enables warnings and logs for this test
+		vashStatic.testable.suppressWarnings(false);
+		
+		var contents = fixLineReturns( fun(originalForEachNested2) )
 		//console.log("contents", contents)
 
-		fs.outputFileSync( TEMP_DIR + "convertForEach/foreach-nested.html", contents );
-		//expect(contents).toContain('@Html.foreach(list, function(item) {\n\tstuff @item stuff\n\tstuff @item stuff\n})')
+		// fs.outputFileSync( TEMP_DIR + "convertForEach/foreach-nested-2.vash", contents );
+		// expect(contents).toContain('@Html.foreach(list, function(item) {\n\tstuff @item stuff\n\tstuff @item stuff\n})')
 		
+		tryToCompile(contents)
+
 		// suppresses warnings and logs again
 		vashStatic.testable.suppressWarnings(true);
 	})
 })
 
-xdescribe("convertStringHelpers", function() {
+
+describe("convertStringHelpers", function() {
 	var fun = vashStatic.testable.convertStringHelpers
 
 	it("should convert string helpers to vash versions", function(){
@@ -448,4 +483,21 @@ describe("XXXXX", function() {
 // Some code editors use '\r' and even '\r\n', so this sanitizes that to just single '\n'
 function fixLineReturns(tmpl) {
 	return tmpl.split("\r\n").join("\n").split("\r").join("\n");
+}
+
+// attempts to compile the given vash template string and fails test if there's an error
+function tryToCompile(contents) {
+	vashStatic.testable.setCustomHelpers();
+
+	var precompiled = vashStatic.testable.compileTemplate(contents);
+	var hasErr = false;
+	
+	try {
+		precompiled({});
+	} catch(err) {
+		console.log(err)
+		hasErr = true;
+	}
+
+	expect(hasErr).toBe(false)
 }

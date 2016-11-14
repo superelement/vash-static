@@ -4,6 +4,6 @@
 
 
 @foreach(var item in list) {
-	stuff @item stuff
-	stuff @item stuff
+	<p>stuff @item stuff
+	stuff @item stuff</p>
 }
