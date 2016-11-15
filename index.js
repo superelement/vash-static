@@ -311,7 +311,7 @@ function convertStringHelpers(tmpl) {
  */
 function convertForEach(tmpl) {
   
-  var OPEN_FE = '@foreach('
+  var OPEN_FE = '@foreach'
     , CLOSE_FE = '++CLOSE_FE++'
     , OPEN_LOGIC = "++OPEN++"
     , CLOSE_LOGIC = "++CLOSE++";
