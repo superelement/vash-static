@@ -443,6 +443,7 @@ function normalizeRazorSyntax(tmpl) {
   tmpl = tmpl.split("Html.Raw").join("Html.raw");
   tmpl = tmpl.split(".Length").join(".length");
   tmpl = tmpl.split(".Count").join(".length");
+  tmpl = tmpl.split(".Any()").join(".length>0");
 
   tmpl = convertForEach(tmpl);
   tmpl = convertStringHelpers(tmpl);

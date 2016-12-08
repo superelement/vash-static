@@ -12,7 +12,7 @@ var MAIN_DIR = slash(__dirname).split("spec")[0]
   , SAMPLE_CACHE = TEST_RES + "sample-template-cache.json"
 
 afterEach(function() {
-	//fs.removeSync(TEMP_DIR);
+	fs.removeSync(TEMP_DIR);
 })
 
 describe("normalizeRazorSyntax", function() {
@@ -35,6 +35,7 @@ describe("normalizeRazorSyntax", function() {
 		expect(fun("Html.Raw()")).toBe("Html.raw()")
 		expect(fun("a.Length")).toBe("a.length")
 		expect(fun("b.Count")).toBe("b.length")
+		expect(fun("b.Any()")).toBe("b.length>0")
 	})
 
 	it("should remove code between 'ignore' comments across multiple line breaks", function() {
