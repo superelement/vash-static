@@ -94,6 +94,7 @@ Gets the name of a module based on containing directory immediately nested withi
 You can use a limited amount of C# syntax, which may be useful if sharing templates with a back end project:
 - `Html.Raw`, which gets converted to `Html.raw`
 - `.Length` or `.Count` for arrays/lists, which gets converted to `.length`
+- `.Any()`, which gets converted to `.length > 0`
 - `@foreach` loops like so. Please note that the `var` and `in` keywords must be present for this to work, but `item` and `list` can be customised.
 ```
 @foreach(var item in list) {
