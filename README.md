@@ -60,7 +60,18 @@ Vash Static uses modules to organise your templates. By default it assumes you h
 
 
 ### getPageDirType
-Fetches the page module type ('pgDirType'), which is 'pg' by default
+Fetches the 'page' module type ('pgDirType'), which is 'pg' by default
+
+
+### setGlobalDirType
+Vash Static uses modules to organise your templates. By default, for "global" templates, it abbreviates to 'glb' and is expected in the directory structure. With 'setGlobalDirType' you can change this, if you need to.
+
+#### Parameters
+- {string} - Replacement for 'glbDirType', which is 'glb' by default
+
+
+### getGlobalDirType
+Fetches the 'global' module type ('glbDirType'), which is 'glb' by default
 
 
 ### getDirTypeFromPath

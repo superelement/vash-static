@@ -16,6 +16,7 @@ logArr = sav.logArr
 
 var models
   , pgDirType = "pg"
+  , glbDirType = "glb"
   , suppressWarnings = false
   , startIgnore = "@*VASH_IGNORE_START*@"
   , endIgnore = "@*VASH_IGNORE_END*@"
@@ -83,6 +84,9 @@ function getTemplateFromCache(tmplName, cacheDest) {
  */
 function prependModels(filePath, type, tmpl, forcedRefresh, cb) {
 
+  // checks if the models should be accessible, which should be for "page" or "global" templates (but not "widgets" or "components")
+  var isUnscopedType = type === pgDirType || type === glbDirType;
+
   if(typeof filePath !== "string") {
     warn(NS, "prependModels", "Could not prepend any models, as supplied 'filePath' was not a string.", filePath);
     cb(tmpl);
@@ -91,7 +95,7 @@ function prependModels(filePath, type, tmpl, forcedRefresh, cb) {
 
   // checks stored version first
   if(models && !forcedRefresh) {
-    cb(type === pgDirType ? models + tmpl : tmpl)
+    cb(isUnscopedType ? models + tmpl : tmpl)
     return
   }
 
@@ -111,7 +115,7 @@ function prependModels(filePath, type, tmpl, forcedRefresh, cb) {
     }
 
     models = _models
-    cb(type === pgDirType ? models + tmpl : tmpl)
+    cb(isUnscopedType ? models + tmpl : tmpl)
   });
 
 }
@@ -744,6 +748,12 @@ module.exports = {
 	}
   , getPageDirType: function() {
 		return pgDirType;
+	}
+  , setGlobalDirType: function(type) {
+		glbDirType = type;
+	}
+  , getGlobalDirType: function() {
+		return glbDirType;
 	}
 	, updateCache: updateCache
   , getDirTypeFromPath: getDirTypeFromPath
