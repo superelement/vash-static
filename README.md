@@ -101,6 +101,13 @@ Gets the name of a module based on containing directory immediately nested withi
 - {boolean} [inclFileName] - Option to append the file name to the end.
 - returns {string} Module name, using the first directory name after the 'type' is detected.
 
+### normalizeRazorSyntax
+Performs conversions to C# syntax, outlined below under the 'C# conversions' heading.
+
+#### Parameters
+- {string} tmpl - Template contents, potentially containing common C# syntax that Vash does not understand.
+
+
 ## C# conversions
 You can use a limited amount of C# syntax, which may be useful if sharing templates with a back end project:
 - `Html.Raw`, which gets converted to `Html.raw`

@@ -759,6 +759,7 @@ module.exports = {
   , getDirTypeFromPath: getDirTypeFromPath
   , getFileName: getFileName
   , getModuleName: getModuleName
+  , normalizeRazorSyntax: normalizeRazorSyntax
   
   // just for unit tests
   , testable: {
@@ -766,7 +767,6 @@ module.exports = {
     , getVashInstance: function() {
       return vash;
     }
-    , normalizeRazorSyntax: normalizeRazorSyntax
     , normalizeTemplate: normalizeTemplate
     , regSlash: regSlash
     , loadTmplCache: loadTmplCache

@@ -17,7 +17,7 @@ afterEach(function() {
 
 describe("normalizeRazorSyntax", function() {
 
-	var fun = vashStatic.testable.normalizeRazorSyntax
+	var fun = vashStatic.normalizeRazorSyntax
 	  , start = "@*VASH_IGNORE_START*@"
 	  , end = "@*VASH_IGNORE_END*@"
 
@@ -63,7 +63,7 @@ describe("normalizeTemplate", function() {
 	  , tmplPath = TEST_RES + "complex.vash"
 	  , dest = TEMP_DIR + "normalizeTemplate/complex.cshtml"
 	  , originalContents = fs.readFileSync(tmplPath).toString()
-	  , normalizedContents = function() { return vashStatic.testable.normalizeRazorSyntax(originalContents) } // using function so 'describe' doesn't execute it
+	  , normalizedContents = function() { return vashStatic.normalizeRazorSyntax(originalContents) } // using function so 'describe' doesn't execute it
 
 	it("should read a template from file system, then save it to the destination file path and pass the same contents to the callback", function(done) {
 		fun(tmplPath, dest, null, function(contents) {
@@ -272,7 +272,7 @@ describe("setCustomHelpers", function() {
 		it("CS 'string.IsNullOrEmpty' should include the code in condition, based on the provided string being empty", function() {
 			fun()
 			var sample = fs.readFileSync(TEST_RES + "StringIsNullOrEmpty-CS.vash").toString()
-			sample = vashStatic.testable.normalizeRazorSyntax(sample)
+			sample = vashStatic.normalizeRazorSyntax(sample)
 			var precompiled = vashStatic.testable.compileTemplate(sample)
 			expect(precompiled()).toContain("<p>should render</p>")
 		})
@@ -297,7 +297,7 @@ describe("setCustomHelpers", function() {
 		it("CS 'string.IsNullOrWhiteSpace' should include the code in condition, based on the provided string being empty", function() {
 			fun()
 			var sample = fs.readFileSync(TEST_RES + "StringIsNullOrWhiteSpace-CS.vash").toString()
-			sample = vashStatic.testable.normalizeRazorSyntax(sample)
+			sample = vashStatic.normalizeRazorSyntax(sample)
 			var precompiled = vashStatic.testable.compileTemplate(sample)
 			expect(precompiled()).toContain("<p>should render</p>")
 		})
