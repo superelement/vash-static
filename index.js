@@ -649,7 +649,11 @@ function updateCache(opts) {
 
 		prependModels(opts.modelsPath, opts.type, tmpl, isModel, function(tmpl) {
 
-			tmpl = compileTemplate(tmpl, opts.debugMode)
+      try {
+        tmpl = compileTemplate(tmpl, opts.debugMode)
+      } catch(e) {
+        console.log(NS, "Error compiling template", opts.tmplPath);
+      }
 
 			var tmplName = opts.type + "_" + getModuleName(opts.tmplPath, opts.type, true)
       
@@ -725,7 +729,12 @@ function precompileTemplateCache(opts, cb) {
 
       prependModels(opts.modelsPath, cnf.type, tmpl, false, function(tmpl) {
 
-        var precompiled = compileTemplate(tmpl, opts.debugMode)
+          var precompiled;
+          try {
+            precompiled = compileTemplate(tmpl, opts.debugMode)
+          } catch(e) {
+            console.log(NS, "Error precompiling template", filePath);
+          }
           
           vash.install(cnf.newTmplName, precompiled);
 

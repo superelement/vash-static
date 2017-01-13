@@ -1,6 +1,6 @@
 {
   "name": "vash-static",
-  "version": "1.0.9",
+  "version": "1.0.10",
   "description": "Static HTML renderer for Razor templates, using the Vash library.",
   "main": "index.js",
   "scripts": {
